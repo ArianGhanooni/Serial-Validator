@@ -1,6 +1,6 @@
 from pyexpat.errors import messages
 
-from flask import Flask, flash, jsonify, request, Response, redirect, url_for, session, abort, render_template
+from flask import Flask, flash, jsonify, request, Response, redirect, url_for, abort, render_template
 from flask_login import LoginManager, UserMixin, login_required, login_user, logout_user
 from werkzeug.utils import secure_filename
 from pandas import read_excel
@@ -58,42 +58,26 @@ def home():
     #check if the post request has the file part
         if 'file' not in request.files:
             flash('No file part')
-            session["message"] = f"No file part"
             return redirect(request.url)
         file = request.files['file']
         # if user does not select file, browser also
         # submit an empty part without filename
         if file.filename == '':
             flash('No selected file')
-            session["message"] = f"No selected part"
             return redirect(request.url)
         if file and allowed_file(file.filename):
             filename = secure_filename(file.filename)
             file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             file.save(file_path)
             rows, failures = import_database_from_excel(file_path)
-            session['message'] = f"Imported {rows} rows of serials and {failures} rows of failure"
+            falsh(f"Imported {rows} rows of serials and {failures} rows of failure")
             os.remove(file_path)
             return redirect("/")
-
-    message = session.get('message', None)
-    session['message'] = ''
-
-    html_str = f'''
-    <!doctype html>
-    <title>Upload new File</title>
-    <h1>Upload new File</h1>
-    <h3>{message}</h3>
-    <form method=post enctype=multipart/form-data>
-        <input type=file name=file>
-        <input type=submit value=Upload>
-    </form>
-    '''
 
     return render_template('index.html')
 
 @app.route("/login", methods=["GET", "POST"])
-@Limiter.limit("5 per minute")
+@Limiter.limit("10 per minute")
 def login():
     if request.method == "POST":
         username = request.form["username"]
@@ -104,14 +88,6 @@ def login():
         else:
             return abort(401)
     else:
-        html_str = Response('''
-        <form action="" method="post">
-            <p><input type=text name=username>
-            <p><input type=password name=password>
-            <p><input type=submit value=Login>
-        </form>
-        ''')
-
         return render_template("login.html")
 
 # somewhere to logout
@@ -119,12 +95,14 @@ def login():
 @login_required
 def logout():
     logout_user()
-    return Response("<p>You have been logged out</p>")
+    flash("Logged out")
+    return redirect("/login")
 
 # handle login failed
 @app.errorhandler(401)
 def page_not_found(error):
-    return Response("<p>Login failed</p>")
+    flash("Login Problem")
+    return redirect("</login")
 
 #callback to reload the user object
 @login_manager.user_loader
