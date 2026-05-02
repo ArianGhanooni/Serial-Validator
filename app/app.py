@@ -147,13 +147,11 @@ def check_serial(serial):
     conn = sqlite3.connect(config.DATABASE_FILE_PATH)
     cur = conn.cursor()
 
-    query = f"SELECT * FROM serials WHERE invalid_serial == '{serial}';"
-    results = cur.execute(query)
+    results = cur.execute("SELECT * FROM serials WHERE invalid_serial == ?" (serial, ))
     if len(results.fetchall()) > 0:
         return "this serial is among failed ones"
 
-    query = f"SELECT * FROM serials WHERE start_serial <= '{serial}' and end_serial >= '{serial}';"
-    results = cur.execute(query)
+    results = cur.execute("SELECT * FROM serials WHERE start_serial <= ? and end_serial >= ?" (serial, serial, ))
     if len(results.fetchall()) == 1:
         return "I found your serial"
 
@@ -213,23 +211,23 @@ def import_database_from_excel(filepath):
         start_serial = normalize_string(start_serial)
         end_serial = normalize_string(end_serial)
 
-        qurey = f'INSERT INTO serials VALUES ("{line}", "{ref}", "{desc}", "{start_serial}", "{end_serial}", "{data}");'
-        cur.execute(qurey)
+        cur.execute("INSERT INTO serials VALUES (?, ?, ?, ?, ?, ?)", (
+                 line, ref, desc, start_serial, end_serial, data)
+                  )
         conn.commit()
         serial_counter += 1
 
     # remove the serials table if exists, then create the new one
     cur.execute("DROP TABLE IF EXISTS invalids")
     cur.execute("""
-    CREATE TABLE IF NOT EXISTS invalids (
+    CREATE TABLE invalids (
         invalid_serial TEXT PRIMARY KEY);
                 """)
 
     df = read_excel(filepath, 1) #Sheet one contains failed serial numbers. only one column
     invalid_counter = 0
     for index, (failed_serial, ) in df.iterrows():
-        qurey = f'INSERT INTO invalids VALUES ("{failed_serial}");'
-        cur.execute(qurey)
+        cur.execute('INSERT INTO invalids VALUES (?)' (failed_serial, ))
         conn.commit()
         invalid_counter += 1
 
