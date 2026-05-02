@@ -229,6 +229,7 @@ def import_database_from_excel(filepath):
     df = read_excel(filepath, 1) #Sheet one contains failed serial numbers. only one column
     invalid_counter = 0
     for index, (failed_serial, ) in df.iterrows():
+        failed_serial = normalize_string(failed_serial)
         cur.execute('INSERT INTO invalids VALUES (?)' (failed_serial, ))
         conn.commit()
         invalid_counter += 1
