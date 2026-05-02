@@ -1,7 +1,7 @@
 from pyexpat.errors import messages
 
 from flask import Flask, flash, jsonify, request, Response, redirect, url_for, abort, render_template
-from flask_login import LoginManager, UserMixin, login_required, login_user, logout_user
+from flask_login import LoginManager, UserMixin, login_required, login_user, logout_user, current_user
 from werkzeug.utils import secure_filename
 from pandas import read_excel
 import requests
@@ -79,6 +79,8 @@ def home():
 @app.route("/login", methods=["GET", "POST"])
 @Limiter.limit("10 per minute")
 def login():
+    if current_user.is_authenticated:
+        return redirect("/")
     if request.method == "POST":
         username = request.form["username"]
         password = request.form["password"]
