@@ -158,11 +158,11 @@ def check_serial(serial):
     return "it was not in the db"
 
 def normalize_string(data, fixed_size = 30):
-    from_persion_char = "۱۲۳۴۵۶۷۸۹۰"
+    from_persian_char = "۱۲۳۴۵۶۷۸۹۰"
     from_arabic_char = "۱۲۳۴۵۶۷۸۹۰" # Must change to Arabic numbers
     to_char = "1234567890"
     for i in range(len(to_char)):
-        data = data.replace(from_persion_char[i], to_char[i])
+        data = data.replace(from_persian_char[i], to_char[i])
         data = data.replace(from_arabic_char[i], to_char[i])
 
     data = data.upper()
