@@ -8,14 +8,14 @@ import requests
 import sqlite3
 import re
 import os
-import config
+from app import config
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
 app = Flask(__name__)
 
-Limiter = Limiter(app, key_func = get_remote_address)
-
+Limiter = Limiter(key_func = get_remote_address)
+Limiter.init_app(app)
 
 
 UPLOAD_FOLDER = config.UPLOAD_FOLDER
