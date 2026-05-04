@@ -131,9 +131,9 @@ def process():
     return jsonify(ret), 200
 
 @app.route("/send_sms")
-def send_sms(message, receptor):
+def send_sms(receptor, message):
     """this function will get a MSISDN and a message, then uses Kavenegar to send sms."""
-    url = f"https://api.kavenegar.com/v1/[config.API_KEY]/sms/send.json"
+    url = f"https://api.kavenegar.com/v1/{config.API_KEY}/sms/send.json"
 
     data = {"message": message,
             "receptor": receptor}
@@ -182,7 +182,7 @@ def normalize_string(data, fixed_size = 30):
 
     missing_zeros = fixed_size - len(all_alpha) - len(all_digit)
 
-    data = all_alpha + "0" + missing_zeros + all_digit
+    data = all_alpha + "0" + str(missing_zeros) + all_digit
 
     return data
 
