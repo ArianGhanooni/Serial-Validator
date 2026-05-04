@@ -5,10 +5,10 @@ from flask_login import LoginManager, UserMixin, login_required, login_user, log
 from werkzeug.utils import secure_filename
 from pandas import read_excel
 import requests
-import sqlite3
+import MySQLdb
 import re
 import os
-from app import config
+import config
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
@@ -16,7 +16,6 @@ app = Flask(__name__)
 
 Limiter = Limiter(key_func = get_remote_address)
 Limiter.init_app(app)
-
 
 UPLOAD_FOLDER = config.UPLOAD_FOLDER
 ALLOWED_EXTENSIONS = config.ALLOWED_EXTENSIONS
@@ -146,16 +145,20 @@ def check_serial(serial):
     this function will get one serial number and return appropriate answer to thant,
     after consulting the db
     """
-    conn = sqlite3.connect(config.DATABASE_FILE_PATH)
-    cur = conn.cursor()
+    db = MySQLdb.connect(host=config.MySQL_HOST,
+                         user=config.MySQL_USERNAME,
+                         passwd=config.MySQL_PASSWORD,
+                         db=config.MySQL_DB_NAME)
+    cur = db.cursor()
 
-    results = cur.execute("SELECT * FROM serials WHERE invalid_serial == ?" (serial, ))
-    if len(results.fetchall()) > 0:
+    results = cur.execute("SELECT * FROM invalids WHERE invalid_serial = %s", (serial,))
+    if results > 0:
         return "this serial is among failed ones"
 
-    results = cur.execute("SELECT * FROM serials WHERE start_serial <= ? and end_serial >= ?" (serial, serial, ))
-    if len(results.fetchall()) == 1:
-        return "I found your serial"
+    results = cur.execute("SELECT * FROM serials WHERE start_serial <= %s and end_serial >= %s", (serial, serial))
+    if results == 1:
+        ret = cur.fetchone()
+        return "I found your serial", ret[2]
 
     return "it was not in the db"
 
@@ -191,50 +194,57 @@ def import_database_from_excel(filepath):
     # df contains lookup data in the form of
     # Row    Reference Number    Description    Start Serial    End Serial   Data
 
+    #Open database
+    db = MySQLdb.connect(host=config.MySQL_HOST,
+                         user=config.MySQL_USERNAME,
+                         passwd=config.MySQL_PASSWORD,
+                         db=config.MySQL_DB_NAME)
+
     # our sqlite database will contain two tables: serials and invalids
-    conn = sqlite3.connect(config.DATABASE_FILE_PATH)
-    cur = conn.cursor()
+    cur = db.cursor()
 
     # remove the serials table if exists, then create the new one
-    cur.execute("DROP TABLE IF EXISTS serials")
+    cur.execute("DROP TABLE IF EXISTS serials;")
     cur.execute("""
     CREATE TABLE IF NOT EXISTS serials (
-        id INTEGER PRIMARY KEY,
-        ref TEXT,
-        desc TEXT,
-        start_serial TEXT,
-        end_serial TEXT,
-        date DATE);
+        id INTEGER AUTO_INCREMENT PRIMARY KEY,
+        ref VARCHAR(200),
+        description VARCHAR(200),
+        start_serial CHAR(30),
+        end_serial CHAR(30),
+        date DATETIME);
                 """)
+    db.commit()
 
     df = read_excel(filepath, 0)
     serial_counter = 0
-    for index, (line, ref, desc, start_serial, end_serial, data) in df.iterrows():
-        start_serial = normalize_string(start_serial)
-        end_serial = normalize_string(end_serial)
+    for index, (line, ref, description, start_serial, end_serial, data) in df.iterrows():
+        start_serial = normalize_string(str(start_serial))
+        end_serial = normalize_string(str(end_serial))
 
-        cur.execute("INSERT INTO serials VALUES (?, ?, ?, ?, ?, ?)", (
-                 line, ref, desc, start_serial, end_serial, data)
+        cur.execute("INSERT INTO serials VALUES (%s, %s, %s, %s, %s, %s);", (
+                 line, ref, description, start_serial, end_serial, data)
                   )
-        conn.commit()
+        db.commit()
         serial_counter += 1
 
     # remove the serials table if exists, then create the new one
-    cur.execute("DROP TABLE IF EXISTS invalids")
+    cur.execute("DROP TABLE IF EXISTS invalids;")
     cur.execute("""
     CREATE TABLE invalids (
-        invalid_serial TEXT PRIMARY KEY);
+        invalid_serial CHAR(30));
                 """)
+    db.commit()
 
     df = read_excel(filepath, 1) #Sheet one contains failed serial numbers. only one column
     invalid_counter = 0
     for index, (failed_serial, ) in df.iterrows():
         failed_serial = normalize_string(failed_serial)
-        cur.execute('INSERT INTO invalids VALUES (?)' (failed_serial, ))
-        conn.commit()
+        cur.execute('INSERT INTO invalids VALUES (%s)', (failed_serial,))
+        db.commit()
         invalid_counter += 1
 
-    conn.close()
+    db.close()
 
     return (serial_counter, invalid_counter)
 
