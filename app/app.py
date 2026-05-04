@@ -70,7 +70,7 @@ def home():
             file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             file.save(file_path)
             rows, failures = import_database_from_excel(file_path)
-            falsh(f"Imported {rows} rows of serials and {failures} rows of failure", "success")
+            flash(f"Imported {rows} rows of serials and {failures} rows of failure", "success")
             os.remove(file_path)
             return redirect("/")
 
@@ -104,7 +104,7 @@ def logout():
 @app.errorhandler(401)
 def page_not_found(error):
     flash("Login Problem", "danger")
-    return redirect("</login")
+    return redirect("/login")
 
 #callback to reload the user object
 @login_manager.user_loader
