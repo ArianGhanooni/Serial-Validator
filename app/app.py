@@ -153,12 +153,16 @@ def check_serial(serial):
 
     results = cur.execute("SELECT * FROM invalids WHERE invalid_serial = %s", (serial,))
     if results > 0:
+        db.close()
         return "this serial is among failed ones"
 
     results = cur.execute("SELECT * FROM serials WHERE start_serial <= %s and end_serial >= %s", (serial, serial))
     if results == 1:
         ret = cur.fetchone()
+        db.close()
         return "I found your serial", ret[2]
+
+    db.close()
 
     return "it was not in the db"
 
