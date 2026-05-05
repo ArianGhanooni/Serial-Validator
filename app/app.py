@@ -171,6 +171,15 @@ def check_serial(serial):
 
     return "it was not in the db"
 
+@app.route("/check_one_serial", methods=["POST"])
+@login_required
+def check_one_serial():
+    serial_to_check = request.form["serial"]
+    answer = check_serial(normalize_string(serial_to_check))
+    flash(answer, 'info')
+
+    return redirect("/")
+
 def normalize_string(data, fixed_size = 30):
     from_persian_char = "۱۲۳۴۵۶۷۸۹۰"
     from_arabic_char = "۱۲۳۴۵۶۷۸۹۰" # Must change to Arabic numbers
