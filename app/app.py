@@ -6,6 +6,7 @@ from werkzeug.utils import secure_filename
 from pandas import read_excel
 import requests
 import MySQLdb
+import time
 import re
 import os
 import config
@@ -124,6 +125,19 @@ def process():
     print(f"received {message}, from {sender}")
 
     answer = check_serial(message)
+
+    db = MySQLdb.connect(host=config.MySQL_HOST,
+                         user=config.MySQL_USERNAME,
+                         passwd=config.MySQL_PASSWORD,
+                         db=config.MySQL_DB_NAME)
+    cur = db.cursor()
+
+    now = time.strftime("%Y-%m-%d %H:%M:%S")
+    cur.execute("INSERT INTO Processed_SMS (sender, message, answer, date) VALUES (%s, %s, %s, %s)",
+                (sender, message, answer, now))
+
+    db.commit()
+    db.close()
 
     send_sms(sender, answer)
     ret = {"message": "processed"}
