@@ -248,5 +248,9 @@ def import_database_from_excel(filepath):
 
     return (serial_counter, invalid_counter)
 
+@app.errorhandler(404)
+def page_not_found(e):
+    return render_template('404.html')
+
 if __name__ == "__main__":
     app.run("0.0.0.0", 5000, debug=True)
