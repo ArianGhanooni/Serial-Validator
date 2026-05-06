@@ -74,7 +74,22 @@ def home():
             os.remove(file_path)
             return redirect("/")
 
-    return render_template('index.html')
+    db = MySQLdb.connect(host=config.MySQL_HOST,
+                         user=config.MySQL_USERNAME,
+                         passwd=config.MySQL_PASSWORD,
+                         db=config.MySQL_DB_NAME)
+    cur = db.cursor()
+
+    cur.execute("SELECT * FROM Processed_SMS ORDER BY date DESC LIMIT 1000")
+    all_sms = cur.fetchall()
+
+    sms_A = []
+
+    for sms in all_sms:
+        sender, message, answer, date = sms
+        sms_A.append({'sender': sender, 'message': message, 'answer': answer, 'date': date})
+
+    return render_template('index.html', data = {'sms_A': sms_A})
 
 @app.route("/login", methods=["GET", "POST"])
 @Limiter.limit("10 per minute")

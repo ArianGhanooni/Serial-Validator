@@ -147,41 +147,29 @@
                                 <table id="datatablesSimple">
                                     <thead>
                                         <tr>
-                                            <th>Name</th>
-                                            <th>Position</th>
-                                            <th>Office</th>
-                                            <th>Age</th>
-                                            <th>Start date</th>
-                                            <th>Salary</th>
+                                            <th>Sender</th>
+                                            <th>Message</th>
+                                            <th>Answer</th>
+                                            <th>Date</th>
                                         </tr>
                                     </thead>
                                     <tfoot>
                                         <tr>
-                                            <th>Name</th>
-                                            <th>Position</th>
-                                            <th>Office</th>
-                                            <th>Age</th>
-                                            <th>Start date</th>
-                                            <th>Salary</th>
+                                            <th>Sender</th>
+                                            <th>Message</th>
+                                            <th>Answer</th>
+                                            <th>Date</th>
                                         </tr>
                                     </tfoot>
                                     <tbody>
+                                        {% for sms in data.sms_A %}
                                         <tr>
-                                            <td>Prescott Bartlett</td>
-                                            <td>Technical Author</td>
-                                            <td>London</td>
-                                            <td>27</td>
-                                            <td>2011/05/07</td>
-                                            <td>$145,000</td>
+                                            <td>{{sms.sender}}</td>
+                                            <td>{{sms.message}}</td>
+                                            <td>{{sms.answer}}</td>
+                                            <td>{{sms.date}}</td>
                                         </tr>
-                                        <tr>
-                                            <td>Prescott Bartlett</td>
-                                            <td>Technical Author</td>
-                                            <td>London</td>
-                                            <td>27</td>
-                                            <td>2011/05/07</td>
-                                            <td>$145,000</td>
-                                        </tr>
+                                        {% endfor %}
                                     </tbody>
                                 </table>
                             </div>
