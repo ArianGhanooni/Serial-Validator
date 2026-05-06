@@ -80,16 +80,31 @@ def home():
                          db=config.MySQL_DB_NAME)
     cur = db.cursor()
 
+    # Get last 1000 SMS
     cur.execute("SELECT * FROM Processed_SMS ORDER BY date DESC LIMIT 1000")
     all_sms = cur.fetchall()
 
     sms_A = []
 
     for sms in all_sms:
-        sender, message, answer, date = sms
-        sms_A.append({'sender': sender, 'message': message, 'answer': answer, 'date': date})
+        status, sender, message, answer, date = sms
+        sms_A.append({'status': status, 'sender': sender, 'message': message, 'answer': answer, 'date': date})
 
-    return render_template('index.html', data = {'sms_A': sms_A})
+    # Collect some status for GUI
+    cur.execute("SELECT count(*) FROM Processed_SMS WHERE status = 'OK'")
+    num_ok = cur.fetchone()[0]
+
+    cur.execute("SELECT count(*) FROM Processed_SMS WHERE status = 'Not-Found'")
+    num_Not_Found = cur.fetchone()[0]
+
+    cur.execute("SELECT count(*) FROM Processed_SMS WHERE status = 'Double'")
+    num_Double = cur.fetchone()[0]
+
+    cur.execute("SELECT count(*) FROM Processed_SMS WHERE status = 'Failure'")
+    num_Failure = cur.fetchone()[0]
+
+    return render_template('index.html', data = {'sms_A': sms_A,
+                                                 'OK': num_ok, 'Failure': num_Failure, 'Not_Found': num_Not_Found, 'Double': num_Double})
 
 @app.route("/login", methods=["GET", "POST"])
 @Limiter.limit("10 per minute")
@@ -139,7 +154,7 @@ def process():
     message = normalize_string(data["message"])
     print(f"received {message}, from {sender}")
 
-    answer = check_serial(message)
+    status, answer = check_serial(message)
 
     db = MySQLdb.connect(host=config.MySQL_HOST,
                          user=config.MySQL_USERNAME,
@@ -148,8 +163,8 @@ def process():
     cur = db.cursor()
 
     now = time.strftime("%Y-%m-%d %H:%M:%S")
-    cur.execute("INSERT INTO Processed_SMS (sender, message, answer, date) VALUES (%s, %s, %s, %s)",
-                (sender, message, answer, now))
+    cur.execute("INSERT INTO Processed_SMS (status, sender, message, answer, date) VALUES (%s, %s, %s, %s, %s)",
+                (status, sender, message, answer, now))
 
     db.commit()
     db.close()
@@ -183,29 +198,29 @@ def check_serial(serial):
     results = cur.execute("SELECT * FROM invalids WHERE invalid_serial = %s", (serial,))
     if results > 0:
         db.close()
-        return "this serial is among failed ones"
+        return "Failure", "this serial is among failed ones"
 
     results = cur.execute("SELECT * FROM serials WHERE start_serial <= %s and end_serial >= %s", (serial, serial))
 
     if results > 1:
         db.close()
-        return "I found your serial"
+        return "Double", "I found your serial"
 
     if results == 1:
         ret = cur.fetchone()
         db.close()
-        return "I found your serial", ret[2]
+        return "OK", "I found your serial" + ret[2]
 
     db.close()
 
-    return "it was not in the db"
+    return "Not-Found", "it was not in the db"
 
 @app.route("/check_one_serial", methods=["POST"])
 @login_required
 def check_one_serial():
     serial_to_check = request.form["serial"]
-    answer = check_serial(normalize_string(serial_to_check))
-    flash(answer, 'info')
+    status, answer = check_serial(normalize_string(serial_to_check))
+    flash(f"{status} - {answer}", 'info')
 
     return redirect("/")
 
@@ -259,7 +274,8 @@ def import_database_from_excel(filepath):
         description VARCHAR(200),
         start_serial CHAR(30),
         end_serial CHAR(30),
-        date DATETIME);
+        date DATETIME,
+        INDEX(start_serial, end_serial));
                 """)
     db.commit()
 
@@ -279,7 +295,7 @@ def import_database_from_excel(filepath):
     cur.execute("DROP TABLE IF EXISTS invalids;")
     cur.execute("""
     CREATE TABLE invalids (
-        invalid_serial CHAR(30));
+        invalid_serial CHAR(30), INDEX(invalid_serial));
                 """)
     db.commit()
 
