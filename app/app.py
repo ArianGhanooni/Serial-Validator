@@ -234,11 +234,11 @@ def normalize_string(data, fixed_size = 30):
     all_alpha = ""
     all_digit = ""
 
-    for c in data:
-        if c.isalpha():
-            all_alpha += c
-        elif c.isdigit():
-            all_digit += c
+    for this_character in data:
+        if this_character.isalpha():
+            all_alpha += this_character
+        elif this_character.isdigit():
+            all_digit += this_character
 
     missing_zeros = fixed_size - len(all_alpha) - len(all_digit)
 
