@@ -18,6 +18,8 @@ app = Flask(__name__)
 Limiter = Limiter(key_func = get_remote_address)
 Limiter.init_app(app)
 
+
+MAX_FLASH = 10
 UPLOAD_FOLDER = config.UPLOAD_FOLDER
 ALLOWED_EXTENSIONS = config.ALLOWED_EXTENSIONS
 CALL_BACK_TOKEN = config.CALL_BACK_TOKEN
@@ -261,46 +263,68 @@ def import_database_from_excel(filepath):
     cur = db.cursor()
 
     # remove the serials table if exists, then create the new one
-    cur.execute("DROP TABLE IF EXISTS serials;")
-    cur.execute("""
-    CREATE TABLE IF NOT EXISTS serials (
-        id INTEGER AUTO_INCREMENT PRIMARY KEY,
-        ref VARCHAR(200),
-        description VARCHAR(200),
-        start_serial CHAR(30),
-        end_serial CHAR(30),
-        date DATETIME,
-        INDEX(start_serial, end_serial));
-                """)
-    db.commit()
+    try:
+        cur.execute("DROP TABLE IF EXISTS serials;")
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS serials (
+            id INTEGER AUTO_INCREMENT PRIMARY KEY,
+            ref VARCHAR(200),
+            description VARCHAR(200),
+            start_serial CHAR(30),
+            end_serial CHAR(30),
+            date DATETIME,
+            INDEX(start_serial, end_serial));
+                    """)
+        db.commit()
+
+    except:
+        flash("Problem importing database", "danger")
 
     df = read_excel(filepath, 0)
-    serial_counter = 0
-    for index, (line, ref, description, start_serial, end_serial, data) in df.iterrows():
-        start_serial = normalize_string(str(start_serial))
-        end_serial = normalize_string(str(end_serial))
+    serial_counter = 1
+    total_flashes = 0
 
-        cur.execute("INSERT INTO serials VALUES (%s, %s, %s, %s, %s, %s);", (
-                 line, ref, description, start_serial, end_serial, data)
-                  )
-        db.commit()
+    for index, (line, ref, description, start_serial, end_serial, data) in df.iterrows():
         serial_counter += 1
+        try:
+            start_serial = normalize_string(str(start_serial))
+            end_serial = normalize_string(str(end_serial))
+
+            cur.execute("INSERT INTO serials VALUES (%s, %s, %s, %s, %s, %s);", (
+                     line, ref, description, start_serial, end_serial, data))
+            db.commit()
+        except:
+            total_flashes += 1
+            if total_flashes < MAX_FLASH:
+                flash(f"Error inserting line {serial_counter} from serials sheet Serials", "danger")
+            else:
+                flash("Too many errors", "danger")
 
     # remove the serials table if exists, then create the new one
-    cur.execute("DROP TABLE IF EXISTS invalids;")
-    cur.execute("""
-    CREATE TABLE invalids (
-        invalid_serial CHAR(30), INDEX(invalid_serial));
-                """)
-    db.commit()
+    try:
+        cur.execute("DROP TABLE IF EXISTS invalids;")
+        cur.execute("""
+        CREATE TABLE invalids (
+            invalid_serial CHAR(30), INDEX(invalid_serial));
+                    """)
+        db.commit()
+    except:
+        flash("Error dropping and creating invalid database", "danger")
 
     df = read_excel(filepath, 1) #Sheet one contains failed serial numbers. only one column
-    invalid_counter = 0
+    invalid_counter = 1
     for index, (failed_serial, ) in df.iterrows():
-        failed_serial = normalize_string(failed_serial)
-        cur.execute('INSERT INTO invalids VALUES (%s)', (failed_serial,))
-        db.commit()
         invalid_counter += 1
+        try:
+            failed_serial = normalize_string(failed_serial)
+            cur.execute('INSERT INTO invalids VALUES (%s)', (failed_serial,))
+            db.commit()
+        except:
+            total_flashes += 1
+            if total_flashes < MAX_FLASH:
+                flash(f"Error inserting line {invalid_counter} from serials sheet Invalids", "danger")
+            else:
+                flash("Too many errors", "danger")
 
     db.close()
 
