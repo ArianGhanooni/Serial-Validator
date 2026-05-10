@@ -28,6 +28,12 @@ app.config.update(
     SECRET_KEY = config.SECRET_KEY,
 )
 
+def get_db_connection():
+    return MySQLdb.connect(host=config.MySQL_HOST,
+                         user=config.MySQL_USERNAME,
+                         passwd=config.MySQL_PASSWORD,
+                         db=config.MySQL_DB_NAME)
+
 def allowed_file(filename):
     return '.' in filename and \
             filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -75,10 +81,7 @@ def home():
             os.remove(file_path)
             return redirect("/")
 
-    db = MySQLdb.connect(host=config.MySQL_HOST,
-                         user=config.MySQL_USERNAME,
-                         passwd=config.MySQL_PASSWORD,
-                         db=config.MySQL_DB_NAME)
+    db = get_db_connection()
     cur = db.cursor()
 
     # Get last 1000 SMS
@@ -157,10 +160,7 @@ def process():
 
     status, answer = check_serial(message)
 
-    db = MySQLdb.connect(host=config.MySQL_HOST,
-                         user=config.MySQL_USERNAME,
-                         passwd=config.MySQL_PASSWORD,
-                         db=config.MySQL_DB_NAME)
+    db = get_db_connection()
     cur = db.cursor()
 
     now = time.strftime("%Y-%m-%d %H:%M:%S")
@@ -190,10 +190,7 @@ def check_serial(serial):
     this function will get one serial number and return appropriate answer to thant,
     after consulting the db
     """
-    db = MySQLdb.connect(host=config.MySQL_HOST,
-                         user=config.MySQL_USERNAME,
-                         passwd=config.MySQL_PASSWORD,
-                         db=config.MySQL_DB_NAME)
+    db = get_db_connection()
     cur = db.cursor()
 
     results = cur.execute("SELECT * FROM invalids WHERE invalid_serial = %s", (serial,))
@@ -258,10 +255,7 @@ def import_database_from_excel(filepath):
     # Row    Reference Number    Description    Start Serial    End Serial   Data
 
     #Open database
-    db = MySQLdb.connect(host=config.MySQL_HOST,
-                         user=config.MySQL_USERNAME,
-                         passwd=config.MySQL_PASSWORD,
-                         db=config.MySQL_DB_NAME)
+    db = get_db_connection()
 
     # our sqlite database will contain two tables: serials and invalids
     cur = db.cursor()
