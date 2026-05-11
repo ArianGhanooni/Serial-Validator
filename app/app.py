@@ -142,6 +142,11 @@ def page_not_found(error):
     flash("Login Problem", "danger")
     return redirect("/login")
 
+#callback to reload the user object
+@login_manager.user_loader
+def load_user(userid):
+    return User(userid)
+
 @app.route("/ok")
 def health_check():
     retr = {"message": "ok"}
