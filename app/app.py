@@ -7,6 +7,7 @@ from pandas import read_excel
 import requests
 import MySQLdb
 import time
+import datetime
 import re
 import os
 import config
@@ -158,7 +159,6 @@ def process():
     data = request.form
     sender = data["from"]
     message = normalize_string(data["message"])
-    print(f"received {message}, from {sender}")
 
     status, answer = check_serial(message)
 
@@ -192,34 +192,59 @@ def check_serial(serial):
     this function will get one serial number and return appropriate answer to thant,
     after consulting the db
     """
+
+    origin_serial = serial
+    serial = normalize_string(serial)
+
     db = get_db_connection()
     cur = db.cursor()
 
     results = cur.execute("SELECT * FROM invalids WHERE invalid_serial = %s", (serial,))
     if results > 0:
         db.close()
-        return "Failure", "this serial is among failed ones"
+        answer = f'''{origin_serial}
+        Please Try Again, Your Serial Number Was Not Recognized.
+        Like FA1234567
+        Please Call Support
+        '''
+        return "Failure", answer
 
     results = cur.execute("SELECT * FROM serials WHERE start_serial <= %s and end_serial >= %s", (serial, serial))
 
     if results > 1:
         db.close()
-        return "Double", "I found your serial"
+        answer = f'''{origin_serial}
+        This Serial Number is OK
+        '''
+        return "Double", answer
 
     if results == 1:
         ret = cur.fetchone()
+        ref_number = ret[1]
+        desc = ret[2]
+        date = ret[5].date()
+
         db.close()
-        return "OK", "I found your serial" + ret[2]
+        answer = f'''{origin_serial}
+        {ref_number}
+        {desc}
+        Hologram Date: {date}
+        '''
+        return "OK", answer
 
     db.close()
 
-    return "Not-Found", "it was not in the db"
+    answer = f'''{origin_serial}
+        We Can't Find Your Serial Number
+        Please Contact With Support
+        '''
+    return "Not-Found", answer
 
 @app.route("/check_one_serial", methods=["POST"])
 @login_required
 def check_one_serial():
     serial_to_check = request.form["serial"]
-    status, answer = check_serial(normalize_string(serial_to_check))
+    status, answer = check_serial(serial_to_check)
     flash(f"{status} - {answer}", 'info')
 
     return redirect("/")
