@@ -138,8 +138,12 @@ def logout():
     return redirect("/login")
 
 # handle login failed
-@app.errorhandler(401)
+@app.errorhandler(404)
 def page_not_found(error):
+    return redirect("/404.html")
+
+@app.errorhandler(401)
+def unauthorized(error):
     flash("Login Problem", "danger")
     return redirect("/login")
 
