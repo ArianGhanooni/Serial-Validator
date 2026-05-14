@@ -307,7 +307,7 @@ def import_database_from_excel(filepath):
 
     df = read_excel(filepath, 0)
     serial_counter = 1
-    total_flashes = 1
+    total_flashes = 0
     line_number = 1
 
     for _ , (line, ref, description, start_serial, end_serial, data) in df.iterrows():
@@ -320,10 +320,10 @@ def import_database_from_excel(filepath):
                      line, ref, description, start_serial, end_serial, data))
             db.commit()
             serial_counter += 1
-        except:
+        except Exception as error:
             total_flashes += 1
             if total_flashes < MAX_FLASH:
-                flash(f"Error inserting line {line_number} from serials sheet Serials", "danger")
+                flash(f"Error inserting line {line_number} from serials sheet Serials; {error}", "danger")
             elif total_flashes == MAX_FLASH:
                 flash("Too many errors", "danger")
 
@@ -335,8 +335,8 @@ def import_database_from_excel(filepath):
             invalid_serial CHAR(30), INDEX(invalid_serial));
                     """)
         db.commit()
-    except:
-        flash("Error dropping and creating invalid database", "danger")
+    except Exception as error:
+        flash(f"Error dropping and creating invalid database; {error}", "danger")
 
     df = read_excel(filepath, 1) #Sheet one contains failed serial numbers. only one column
     invalid_counter = 1
@@ -349,10 +349,10 @@ def import_database_from_excel(filepath):
             cur.execute('INSERT INTO invalids VALUES (%s)', (failed_serial,))
             db.commit()
             invalid_counter += 1
-        except:
+        except Exception as error:
             total_flashes += 1
             if total_flashes < MAX_FLASH:
-                flash(f"Error inserting line {line_number} from serials sheet Invalids", "danger")
+                flash(f"Error inserting line {line_number} from serials sheet Invalids; {error}", "danger")
             elif total_flashes == MAX_FLASH:
                 flash("Too many errors", "danger")
 
