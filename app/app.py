@@ -307,10 +307,10 @@ def import_database_from_excel(filepath):
 
     df = read_excel(filepath, 0)
     serial_counter = 1
-    total_flashes = 0
+    total_flashes = 1
     line_number = 1
 
-    for index, (line, ref, description, start_serial, end_serial, data) in df.iterrows():
+    for _ , (line, ref, description, start_serial, end_serial, data) in df.iterrows():
         line_number += 1
         try:
             start_serial = normalize_string(str(start_serial))
@@ -324,7 +324,7 @@ def import_database_from_excel(filepath):
             total_flashes += 1
             if total_flashes < MAX_FLASH:
                 flash(f"Error inserting line {line_number} from serials sheet Serials", "danger")
-            else:
+            elif total_flashes == MAX_FLASH:
                 flash("Too many errors", "danger")
 
     # remove the serials table if exists, then create the new one
@@ -342,7 +342,7 @@ def import_database_from_excel(filepath):
     invalid_counter = 1
     line_number = 1
 
-    for index, (failed_serial, ) in df.iterrows():
+    for _ , (failed_serial, ) in df.iterrows():
         line_number += 1
         try:
             failed_serial = normalize_string(failed_serial)
@@ -353,7 +353,7 @@ def import_database_from_excel(filepath):
             total_flashes += 1
             if total_flashes < MAX_FLASH:
                 flash(f"Error inserting line {line_number} from serials sheet Invalids", "danger")
-            else:
+            elif total_flashes == MAX_FLASH:
                 flash("Too many errors", "danger")
 
     db.close()
